@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: hackacure-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: USE_GEMINI_API
+        value: true
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: USE_GOOGLE_VERTEX
+        value: true
+      - key: GOOGLE_CLOUD_PROJECT
+        value: hackacure-476510
+      - key: GOOGLE_CLOUD_LOCATION
+        value: us-central1
+      - key: GOOGLE_VERTEX_EMBEDDING_MODEL
+        value: text-embedding-004
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_COLLECTION_NAME
+        value: medical_qa
