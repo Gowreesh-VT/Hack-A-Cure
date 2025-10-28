@@ -13,6 +13,16 @@ from qdrant_client import QdrantClient
 
 from app.core.config import settings
 
+# Setup Google Cloud credentials from environment variable if provided
+if os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON"):
+    import tempfile
+    # Write the JSON credentials to a temporary file
+    credentials_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        f.write(credentials_json)
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = f.name
+    print(f"✅ Google Cloud credentials loaded from environment variable")
+
 # Try to import Google Vertex AI (optional)
 try:
     from langchain_google_vertexai import ChatVertexAI, VertexAIEmbeddings

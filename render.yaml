@@ -43,18 +43,28 @@ services:
       - key: SQLALCHEMY_DATABASE_URI
         value: sqlite:///./db.sqlite
       - key: USE_GEMINI_API
-        value: true
+        value: false
       - key: GOOGLE_API_KEY
         sync: false
       - key: GEMINI_MODEL
         value: gemini-2.0-flash-exp
       - key: USE_GOOGLE_VERTEX
-        value: false
+        value: true
+      - key: GOOGLE_CLOUD_PROJECT
+        value: hackacure-476510
+      - key: GOOGLE_CLOUD_LOCATION
+        value: us-central1
+      - key: GOOGLE_VERTEX_MODEL
+        value: gemini-1.5-flash
+      - key: GOOGLE_VERTEX_EMBEDDING_MODEL
+        value: text-embedding-004
+      - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+        sync: false
       - key: QDRANT_URL
         sync: false
       - key: QDRANT_API_KEY
         sync: false
       - key: QDRANT_COLLECTION_NAME
-        value: medical_qa_gemini
+        value: medical_qa
       - key: BACKEND_CORS_ORIGINS
         value: https://hackacure-api.onrender.com
