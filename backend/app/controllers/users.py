@@ -1,4 +1,5 @@
 
+from typing import Optional
 from sqlmodel import Session, select
 
 from app.core.security import (
@@ -18,19 +19,19 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
     return db_obj
 
 
-def get_user_by_email(*, session: Session, email: str) -> User | None:
+def get_user_by_email(*, session: Session, email: str) -> Optional[User]:
     statement = select(User).where(User.email == email)
     session_user = session.exec(statement).first()
     return session_user
 
 
-def get_user_by_uid(*, session: Session, uid: str) -> User | None:
+def get_user_by_uid(*, session: Session, uid: str) -> Optional[User]:
     statement = select(User).where(User.id == uid)
     session_user = session.exec(statement).first()
     return session_user
 
 
-def verify_and_generate_token(*, session: Session, email: str, password: str) -> Token | None:
+def verify_and_generate_token(*, session: Session, email: str, password: str) -> Optional[Token]:
     user = get_user_by_email(session=session, email=email)
     if not user:
         raise ValueError("Incorrect email and password combination!")

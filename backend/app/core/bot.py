@@ -9,6 +9,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.vectorstores import VectorStore
 from langchain_core.messages import BaseMessageChunk, message_to_dict
 from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
 
 from app.core.config import settings
 
@@ -24,13 +25,33 @@ EMBEDDINGS = OpenAIEmbeddings(
     api_key=settings.OPENAI_API_KEY,
 )
 
+# Lazy initialization to avoid OpenAI API calls at startup
+_VECTOR_STORE = None
 
-VECTOR_STORE = QdrantVectorStore.from_existing_collection(
-    embedding=EMBEDDINGS,
-    collection_name=settings.QDRANT_COLLECTION_NAME,
-    url=settings.QDRANT_URL,
-    api_key=settings.QDRANT_API_KEY,
-)
+def get_vector_store():
+    """Get or create the vector store instance"""
+    global _VECTOR_STORE
+    if _VECTOR_STORE is None:
+        client = QdrantClient(
+            url=settings.QDRANT_URL,
+            api_key=settings.QDRANT_API_KEY if settings.QDRANT_API_KEY else None
+        )
+        _VECTOR_STORE = QdrantVectorStore(
+            client=client,
+            collection_name=settings.QDRANT_COLLECTION_NAME,
+            embedding=EMBEDDINGS,
+        )
+    return _VECTOR_STORE
+
+# Create a simple accessor that looks like a constant but calls the function
+class VectorStoreAccessor:
+    def __getattribute__(self, name):
+        return getattr(get_vector_store(), name)
+    
+    def __getattr__(self, name):
+        return getattr(get_vector_store(), name)
+
+VECTOR_STORE = VectorStoreAccessor()
 
 SYSTEM_PROMPT = """
 You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. 

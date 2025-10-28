@@ -1,5 +1,5 @@
 import secrets
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Union, List
 from pydantic import (
     AnyUrl,
     BeforeValidator,
@@ -12,18 +12,18 @@ from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def parse_cors(v: Any) -> list[str] | str:
+def parse_cors(v: Any) -> Union[List[str], str]:
     if isinstance(v, str) and not v.startswith("["):
         return [i.strip() for i in v.split(",")]
-    elif isinstance(v, list | str):
+    elif isinstance(v, (list, str)):
         return v
     raise ValueError(v)
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        # Use top level .env file (one level above ./backend/)
-        env_file="./.env",
+        # Use .env file in backend directory
+        env_file="backend/.env",
         env_ignore_empty=True,
         extra="ignore",
     )
@@ -35,18 +35,18 @@ class Settings(BaseSettings):
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
     BACKEND_CORS_ORIGINS: Annotated[
-        list[AnyUrl] | str, BeforeValidator(parse_cors)
+        Union[List[AnyUrl], str], BeforeValidator(parse_cors)
     ] = []
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def all_cors_origins(self) -> list[str]:
+    def all_cors_origins(self) -> List[str]:
         return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
             self.FRONTEND_HOST
         ]
 
     PROJECT_NAME: str
-    SENTRY_DSN: HttpUrl | None = None
+    SENTRY_DSN: Union[HttpUrl, None] = None
 
     SQLALCHEMY_DATABASE_URI: str
 

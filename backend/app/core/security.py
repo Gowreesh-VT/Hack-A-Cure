@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Union
 
 import jwt
 import bcrypt
@@ -12,7 +12,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 def create_access_token(
-    subject: str | Any,
+    subject: Union[str, Any],
     expires_delta: timedelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 ) -> str:
     expire = datetime.now(timezone.utc) + expires_delta

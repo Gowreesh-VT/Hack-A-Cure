@@ -6,6 +6,7 @@ from mangum import Mangum
 from app.routes import api_router
 from app.core.config import settings
 from app.core.scheduler import lifespan
+from app.views import query as query_view
 
 
 # function for enabling CORS on web server
@@ -21,8 +22,11 @@ def add_cors(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-
+# Include API routes with /api/v1 prefix
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Also include query endpoint at root level for evaluation
+app.include_router(query_view.router, prefix="")
 
 
 @app.get("/health-check", status_code=status.HTTP_200_OK)

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Optional
 from pydantic import EmailStr
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import func
@@ -11,7 +12,7 @@ from app.core.security import generate_password_hash, verify_password
 class UserBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     first_name: str = Field(default=None, max_length=255, nullable=False)
-    last_name: str | None = Field(default='', max_length=255, nullable=True)
+    last_name: Optional[str] = Field(default='', max_length=255, nullable=True)
     is_superuser: bool = False
 
 
@@ -24,7 +25,7 @@ class UserRegister(SQLModel):
     email: EmailStr = Field(max_length=255)
     password: str = Field(min_length=8, max_length=40)
     first_name: str = Field(default=None, max_length=255, nullable=False)
-    last_name: str | None = Field(default='', max_length=255, nullable=True)
+    last_name: Optional[str] = Field(default='', max_length=255, nullable=True)
 
 
 class UserLogin(SQLModel):
@@ -72,4 +73,4 @@ class UserPublicToken(UserBase):
 
 # Contents of JWT token
 class TokenPayload(SQLModel):
-    sub: str | None = None
+    sub: Optional[str] = None
