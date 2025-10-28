@@ -21,3 +21,5 @@ SQLAlchemy
 sqlmodel
 tiktoken
 websockets
+langchain-google-genai
+langchain-google-vertexai

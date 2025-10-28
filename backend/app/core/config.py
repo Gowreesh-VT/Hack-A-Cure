@@ -22,10 +22,12 @@ def parse_cors(v: Any) -> Union[List[str], str]:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        # Use .env file in backend directory
-        env_file="backend/.env",
+        # Use .env file - will check current dir and parent dirs
+        env_file=".env",
+        env_file_encoding="utf-8",
         env_ignore_empty=True,
         extra="ignore",
+        case_sensitive=True,
     )
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
@@ -63,11 +65,32 @@ class Settings(BaseSettings):
     
     TIME_ZONE : str
     
-    # LLM RAG
-    ## OpenAI
-    OPENAI_API_KEY: str
-    OPENAI_MODEL_NAME: str
-    OPENAI_EMBEDDINGS_NAME: str
+    # LLM RAG - supports OpenAI, Azure OpenAI, and Google Vertex AI
+    ## OpenAI (standard) - optional if using Google Vertex AI
+    OPENAI_API_KEY: Union[str, None] = None
+    OPENAI_MODEL_NAME: Union[str, None] = None
+    OPENAI_EMBEDDINGS_NAME: Union[str, None] = None
+    
+    ## Azure OpenAI (optional - set USE_AZURE=true to enable)
+    USE_AZURE: bool = False
+    AZURE_OPENAI_API_KEY: Union[str, None] = None
+    AZURE_OPENAI_ENDPOINT: Union[str, None] = None
+    AZURE_OPENAI_API_VERSION: str = "2024-02-15-preview"
+    AZURE_OPENAI_DEPLOYMENT_NAME: Union[str, None] = None
+    AZURE_OPENAI_EMBEDDING_DEPLOYMENT: Union[str, None] = None
+    
+    ## Google Cloud Vertex AI (optional - set USE_GOOGLE_VERTEX=true to enable)
+    USE_GOOGLE_VERTEX: bool = False
+    GOOGLE_CLOUD_PROJECT: Union[str, None] = None
+    GOOGLE_CLOUD_LOCATION: str = "us-central1"
+    GOOGLE_VERTEX_MODEL: str = "gemini-1.0-pro"
+    GOOGLE_VERTEX_EMBEDDING_MODEL: str = "text-embedding-004"
+    
+    ## Google Gemini API (direct API - simpler than Vertex AI)
+    USE_GEMINI_API: bool = False
+    GOOGLE_API_KEY: Union[str, None] = None
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    
     ## Qdrant
     QDRANT_COLLECTION_NAME: str
     QDRANT_API_KEY: str

@@ -41,10 +41,12 @@ See `DATASET_INGESTION.md` and `QUICK_START_INGESTION.md` for detailed documenta
 ## Quick Start
 
 ### Prerequisites
-- Python 3.11+
-- PostgreSQL database
+- Python 3.9+
 - Qdrant Cloud account (or local Qdrant instance)
-- OpenAI API key
+- **Choose ONE of the following:**
+  - **Option 1:** OpenAI API key
+  - **Option 2:** Azure OpenAI account (recommended if you have Azure credits)
+  - **Option 3:** Google Cloud account with Vertex AI (recommended if you have GCP credits)
 
 ### Setup
 
@@ -60,6 +62,11 @@ See `DATASET_INGESTION.md` and `QUICK_START_INGESTION.md` for detailed documenta
    cp .env.example .env
    # Edit .env with your configuration
    ```
+   
+   **Choose your LLM provider:**
+   - For **OpenAI**: Keep default settings in `.env`
+   - For **Azure OpenAI**: See `AZURE_OPENAI_SETUP.md` (if available)
+   - For **Google Vertex AI**: See `GOOGLE_VERTEX_SETUP.md` 👈 **Free tier available!**
 
 3. **Install dependencies**
    ```bash
@@ -73,14 +80,30 @@ See `DATASET_INGESTION.md` and `QUICK_START_INGESTION.md` for detailed documenta
    poetry shell
    ```
 
-4. **Run the backend**
+4. **Set up Qdrant (Vector Database)**
+   ```bash
+   # Create collection
+   python3 setup_qdrant.py
+   ```
+   
+   See `QDRANT_SETUP.md` for detailed instructions.
+
+5. **Upload Your Dataset**
+   ```bash
+   # Upload medical data
+   python3 upload_json.py processed_medical_data.json
+   ```
+   
+   See `DATASET_INGESTION.md` for more options.
+
+6. **Run the backend**
    ```bash
    python main.py
    ```
    
    The API will be available at `http://localhost:8000`
 
-5. **Access API Documentation**
+7. **Access API Documentation**
    - Swagger UI: `http://localhost:8000/docs`
    - ReDoc: `http://localhost:8000/redoc`
 

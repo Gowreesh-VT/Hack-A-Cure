@@ -45,8 +45,23 @@ async def query_endpoint(req: QueryRequest):
         # Retrieve relevant documents from vector store
         retrieved_docs = VECTOR_STORE.similarity_search(req.query, k=top_k)
         
-        # Extract context snippets as plain strings
-        contexts = [doc.page_content for doc in retrieved_docs]
+        # Extract context snippets as plain strings, clean and deduplicate
+        raw_contexts = [doc.page_content for doc in retrieved_docs]
+        
+        # Clean unicode escape sequences and normalize whitespace
+        cleaned_contexts = []
+        seen = set()
+        for ctx in raw_contexts:
+            # Remove unicode soft hyphens and other special chars
+            cleaned = ctx.replace('\u00ad', '').replace('\xa0', ' ')
+            # Normalize whitespace
+            cleaned = ' '.join(cleaned.split())
+            # Deduplicate
+            if cleaned not in seen and cleaned.strip():
+                seen.add(cleaned)
+                cleaned_contexts.append(cleaned)
+        
+        contexts = cleaned_contexts
         
         # Generate answer using RAG
         state = {

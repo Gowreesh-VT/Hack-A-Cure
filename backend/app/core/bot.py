@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 
 from langchain.chat_models import init_chat_model
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings, AzureChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.vectorstores import VectorStore
 from langchain_core.messages import BaseMessageChunk, message_to_dict
@@ -13,17 +13,79 @@ from qdrant_client import QdrantClient
 
 from app.core.config import settings
 
+# Try to import Google Vertex AI (optional)
+try:
+    from langchain_google_vertexai import ChatVertexAI, VertexAIEmbeddings
+    VERTEX_AVAILABLE = True
+except ImportError:
+    VERTEX_AVAILABLE = False
+    ChatVertexAI = None
+    VertexAIEmbeddings = None
 
-LLM = init_chat_model(
-    settings.OPENAI_MODEL_NAME or "gpt-4o-mini",
-    model_provider="openai",
-    api_key=settings.OPENAI_API_KEY
-)
+# Try to import Google Gemini API (optional)
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    GEMINI_API_AVAILABLE = True
+except ImportError:
+    GEMINI_API_AVAILABLE = False
+    ChatGoogleGenerativeAI = None
 
-EMBEDDINGS = OpenAIEmbeddings(
-    model=settings.OPENAI_EMBEDDINGS_NAME or "text-embedding-3-small",
-    api_key=settings.OPENAI_API_KEY,
-)
+
+# Initialize LLM based on provider selection
+if settings.USE_GEMINI_API and settings.GOOGLE_API_KEY:
+    if not GEMINI_API_AVAILABLE:
+        raise ImportError("langchain-google-genai is not installed. Run: pip install langchain-google-genai")
+    print("🌟 Using Google Gemini API")
+    LLM = ChatGoogleGenerativeAI(
+        model=settings.GEMINI_MODEL,
+        google_api_key=settings.GOOGLE_API_KEY,
+    )
+elif settings.USE_GOOGLE_VERTEX and settings.GOOGLE_CLOUD_PROJECT:
+    if not VERTEX_AVAILABLE:
+        raise ImportError("langchain-google-vertexai is not installed. Run: pip install langchain-google-vertexai")
+    print("🟡 Using Google Vertex AI")
+    LLM = ChatVertexAI(
+        model=settings.GOOGLE_VERTEX_MODEL,
+        project=settings.GOOGLE_CLOUD_PROJECT,
+        location=settings.GOOGLE_CLOUD_LOCATION,
+    )
+elif settings.USE_AZURE and settings.AZURE_OPENAI_API_KEY:
+    print("🔵 Using Azure OpenAI")
+    LLM = AzureChatOpenAI(
+        azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT_NAME,
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_API_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
+else:
+    print("🟢 Using OpenAI")
+    LLM = init_chat_model(
+        settings.OPENAI_MODEL_NAME or "gpt-4o-mini",
+        model_provider="openai",
+        api_key=settings.OPENAI_API_KEY
+    )
+
+# Initialize Embeddings based on provider selection
+if settings.USE_GOOGLE_VERTEX and settings.GOOGLE_CLOUD_PROJECT:
+    if not VERTEX_AVAILABLE:
+        raise ImportError("langchain-google-vertexai is not installed. Run: pip install langchain-google-vertexai")
+    EMBEDDINGS = VertexAIEmbeddings(
+        model_name=settings.GOOGLE_VERTEX_EMBEDDING_MODEL,
+        project=settings.GOOGLE_CLOUD_PROJECT,
+        location=settings.GOOGLE_CLOUD_LOCATION,
+    )
+elif settings.USE_AZURE and settings.AZURE_OPENAI_API_KEY:
+    EMBEDDINGS = AzureOpenAIEmbeddings(
+        azure_deployment=settings.AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_API_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
+else:
+    EMBEDDINGS = OpenAIEmbeddings(
+        model=settings.OPENAI_EMBEDDINGS_NAME or "text-embedding-3-small",
+        api_key=settings.OPENAI_API_KEY,
+    )
 
 # Lazy initialization to avoid OpenAI API calls at startup
 _VECTOR_STORE = None
