@@ -69,3 +69,6 @@ sample_*.csv
 # OS
 .DS_Store
 Thumbs.db
+processed_medical_data.json
+backend/.env
+.env

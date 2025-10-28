@@ -1,55 +1,26 @@
-ARG APP_ROOT="/app"
-
-FROM python:3.12.9-alpine AS builder
-
-# Don't buffer `stdout`:
-ENV PYTHONUNBUFFERED=1
-# Don't create `.pyc` files:
-ENV PYTHONDONTWRITEBYTECODE=1
+FROM python:3.9-slim
 
 WORKDIR /app
-ADD pyproject.toml poetry.lock /app/
 
-RUN apk add build-base libffi-dev curl
-
-# # Rust Compiler Installation
-# Get Rust; NOTE: using sh for better compatibility with other base images
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-# Add .cargo/bin to PATH
-RUN echo '. $HOME/.cargo/env' >> $HOME/.bashrc
-ENV PATH="/root/.cargo/bin:${PATH}"
-# Check cargo is visible
-RUN cargo --help
-RUN rustc --version
-
-# # Install Poetry
-# RUN pip install poetry
-# RUN poetry config virtualenvs.in-project true
-# # Install Dependencies
-# RUN poetry install --no-ansi --without dev
-
+# Copy requirements first for better caching
 COPY requirements.txt .
-# Install all dependencies.
-RUN pip3 install -r requirements.txt --target "/app" -U --no-cache-dir
 
-RUN ls -a /app
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# ---
+# Copy application code
+COPY . .
 
-FROM python:3.12.9-alpine
-WORKDIR /app
+# Copy environment file
+COPY .env .
 
-RUN apk add libgcc
-
-COPY --from=builder /app /app
-# COPY --from=builder /app/.venv/lib/python3.12/site-packages/ /app/.venv/lib/python3.12/site-packages/
-ADD . /app
-
-COPY .env /app
-
-ENV PATH="/app/.venv/bin:$PATH"
-
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV PORT=8080
 
-EXPOSE 8000
-CMD ["python3", "-m", "fastapi", "run", "--workers", "4", "app/main.py"]
+# Expose port
+EXPOSE 8080
+
+# Run the application
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
