@@ -30,15 +30,16 @@ class IngestTextRequest(BaseModel):
 @router.post("/upload-file", response_model=IngestResponse, status_code=status.HTTP_201_CREATED)
 async def upload_file(
     file: UploadFile = File(...),
-    chunk_size: int = 1000,
-    chunk_overlap: int = 200
+    chunk_size: int = 500,
+    chunk_overlap: int = 100
 ):
     """
     Upload and ingest a file (TXT, JSON, CSV) into the vector store.
+    Optimized chunking for better retrieval scores.
     
     - **file**: The file to upload (supported formats: .txt, .json, .csv)
-    - **chunk_size**: Size of text chunks for splitting (default: 1000)
-    - **chunk_overlap**: Overlap between chunks (default: 200)
+    - **chunk_size**: Size of text chunks for splitting (default: 500, optimized for medical text)
+    - **chunk_overlap**: Overlap between chunks (default: 100, ensures context continuity)
     """
     
     if not file.filename:
@@ -124,11 +125,14 @@ async def upload_file(
                     metadata=metadata
                 ))
         
-        # Split documents into chunks
+        # Split documents into chunks with better strategy for medical text
+        # Using smaller chunks and separators optimized for medical text
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
             length_function=len,
+            separators=["\n\n", "\n", ". ", "? ", "! ", "; ", ", ", " ", ""],  # Better splitting
+            keep_separator=True,  # Keep punctuation for context
         )
         
         split_docs = text_splitter.split_documents(documents)
@@ -157,16 +161,17 @@ async def upload_file(
 @router.post("/upload-texts", response_model=IngestResponse, status_code=status.HTTP_201_CREATED)
 async def upload_texts(
     request: IngestTextRequest,
-    chunk_size: int = 1000,
-    chunk_overlap: int = 200
+    chunk_size: int = 500,
+    chunk_overlap: int = 100
 ):
     """
     Ingest a list of text strings directly into the vector store.
+    Optimized chunking for better retrieval scores.
     
     - **texts**: List of text strings to ingest
     - **metadatas**: Optional list of metadata dictionaries (one per text)
-    - **chunk_size**: Size of text chunks for splitting (default: 1000)
-    - **chunk_overlap**: Overlap between chunks (default: 200)
+    - **chunk_size**: Size of text chunks for splitting (default: 500, optimized for medical text)
+    - **chunk_overlap**: Overlap between chunks (default: 100, ensures context continuity)
     """
     
     if not request.texts:
@@ -189,11 +194,13 @@ async def upload_texts(
                 metadata=metadata
             ))
         
-        # Split documents into chunks
+        # Split documents into chunks with better strategy for medical text
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
             length_function=len,
+            separators=["\n\n", "\n", ". ", "? ", "! ", "; ", ", ", " ", ""],
+            keep_separator=True,
         )
         
         split_docs = text_splitter.split_documents(documents)

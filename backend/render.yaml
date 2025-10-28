@@ -9,19 +9,53 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.0
+        value: 3.12.0
+      - key: API_V1_STR
+        value: /api/v1
+      - key: DOMAIN
+        value: localhost
+      - key: ENVIRONMENT
+        value: production
+      - key: PROJECT_NAME
+        value: Medical RAG Chatbot
+      - key: TIME_ZONE
+        value: UTC
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 11520
+      - key: FIRST_SUPERUSER
+        value: admin@hackacure.com
+      - key: FIRST_SUPERUSER_PASSWORD
+        sync: false
+      - key: FIRST_SUPERUSER_FIRST_NAME
+        value: Admin
+      - key: FIRST_SUPERUSER_LAST_NAME
+        value: User
+      - key: JWT_USER
+        value: user@hackacure.com
+      - key: JWT_USER_PASSWORD
+        sync: false
+      - key: JWT_USER_FIRST_NAME
+        value: Test
+      - key: JWT_USER_LAST_NAME
+        value: User
+      - key: SQLALCHEMY_DATABASE_URI
+        value: sqlite:///./db.sqlite
       - key: USE_GEMINI_API
         value: true
       - key: GOOGLE_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.0-flash
+        value: gemini-2.0-flash-exp
       - key: USE_GOOGLE_VERTEX
         value: true
       - key: GOOGLE_CLOUD_PROJECT
         value: hackacure-476510
       - key: GOOGLE_CLOUD_LOCATION
         value: us-central1
+      - key: GOOGLE_VERTEX_MODEL
+        value: gemini-1.5-flash
       - key: GOOGLE_VERTEX_EMBEDDING_MODEL
         value: text-embedding-004
       - key: QDRANT_URL
@@ -30,3 +64,5 @@ services:
         sync: false
       - key: QDRANT_COLLECTION_NAME
         value: medical_qa
+      - key: BACKEND_CORS_ORIGINS
+        value: https://hackacure-api.onrender.com
