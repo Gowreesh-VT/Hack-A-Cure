@@ -50,10 +50,6 @@ services:
         value: gemini-2.0-flash-exp
       - key: USE_GOOGLE_VERTEX
         value: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: OPENAI_EMBEDDINGS_NAME
-        value: text-embedding-3-small
       - key: GOOGLE_CLOUD_PROJECT
         value: hackacure-476510
       - key: GOOGLE_CLOUD_LOCATION

@@ -24,11 +24,12 @@ except ImportError:
 
 # Try to import Google Gemini API (optional)
 try:
-    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
     GEMINI_API_AVAILABLE = True
 except ImportError:
     GEMINI_API_AVAILABLE = False
     ChatGoogleGenerativeAI = None
+    GoogleGenerativeAIEmbeddings = None
 
 
 # Initialize LLM based on provider selection
@@ -66,7 +67,15 @@ else:
     )
 
 # Initialize Embeddings based on provider selection
-if settings.USE_GOOGLE_VERTEX and settings.GOOGLE_CLOUD_PROJECT:
+if settings.USE_GEMINI_API and settings.GOOGLE_API_KEY:
+    if not GEMINI_API_AVAILABLE:
+        raise ImportError("langchain-google-genai is not installed. Run: pip install langchain-google-genai")
+    print("🌟 Using Google Gemini Embeddings")
+    EMBEDDINGS = GoogleGenerativeAIEmbeddings(
+        model="models/embedding-001",
+        google_api_key=settings.GOOGLE_API_KEY,
+    )
+elif settings.USE_GOOGLE_VERTEX and settings.GOOGLE_CLOUD_PROJECT:
     if not VERTEX_AVAILABLE:
         raise ImportError("langchain-google-vertexai is not installed. Run: pip install langchain-google-vertexai")
     EMBEDDINGS = VertexAIEmbeddings(
