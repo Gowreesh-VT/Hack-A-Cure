@@ -14,13 +14,14 @@ class QueryRequest(BaseModel):
     top_k: int = Field(default=5, description="Number of context snippets to retrieve")
     use_query_expansion: bool = Field(default=False, description="Expand query with medical terms")
     score_threshold: float = Field(default=0.0, description="Minimum similarity score (0-1)")
+    summarize_context: bool = Field(default=True, description="Use AI to summarize contexts before answering")
 
 
 class QueryResponse(BaseModel):
     answer: str = Field(..., description="The generated answer")
-    contexts: List[str] = Field(..., description="List of context snippets used")
+    contexts: List[str] = Field(..., description="List of context snippets (summarized if enabled)")
     scores: List[float] = Field(..., description="Similarity scores for each context")
-    expanded_query: Optional[str] = Field(None, description="Query after expansion (if used)")
+    metadata: List[Dict] = Field(default=[], description="Metadata for each context (e.g., source, book name)")
 
 
 def expand_medical_query(query: str, llm) -> str:
@@ -43,6 +44,78 @@ Expanded query with medical terms:"""
         return query
 
 
+def summarize_contexts(query: str, contexts: List[str], llm) -> List[str]:
+    """
+    Use AI to intelligently summarize and condense contexts while keeping relevant information.
+    Optimized to process all contexts in a single LLM call for better performance.
+    """
+    # Skip if all contexts are already short
+    if all(len(c) < 200 for c in contexts):
+        return contexts
+    
+    # Build a single prompt with all contexts numbered
+    contexts_text = "\n\n".join([f"Context {i+1}:\n{ctx}" for i, ctx in enumerate(contexts)])
+    
+    summarization_prompt = f"""Extract ONLY the key medical information from each context that directly answers this question. 
+Remove unnecessary details, references, or background information. Keep each summary concise and focused.
+
+Question: {query}
+
+{contexts_text}
+
+Provide a concise summary for each context (under 100 words each). Format as:
+Context 1: [summary]
+Context 2: [summary]
+..."""
+    
+    try:
+        response = llm.invoke(summarization_prompt)
+        summary_text = response.content if hasattr(response, 'content') else str(response)
+        
+        # Parse the numbered summaries
+        summarized = []
+        lines = summary_text.strip().split('\n')
+        current_summary = []
+        
+        for line in lines:
+            # Check if this is a new context marker
+            if line.strip().startswith('Context ') and ':' in line:
+                # Save previous summary if exists
+                if current_summary:
+                    summary = ' '.join(current_summary).strip()
+                    # Clean markdown and formatting
+                    summary = summary.replace('*', '').replace('•', '').replace('-', '')
+                    summary = ' '.join(summary.split())
+                    summarized.append(summary)
+                    current_summary = []
+                
+                # Start new summary (skip the "Context N:" part)
+                content_after_colon = line.split(':', 1)[1] if ':' in line else ''
+                if content_after_colon.strip():
+                    current_summary.append(content_after_colon.strip())
+            else:
+                # Continue current summary
+                if line.strip():
+                    current_summary.append(line.strip())
+        
+        # Add the last summary
+        if current_summary:
+            summary = ' '.join(current_summary).strip()
+            summary = summary.replace('*', '').replace('•', '').replace('-', '')
+            summary = ' '.join(summary.split())
+            summarized.append(summary)
+        
+        # If parsing failed or we got wrong number of summaries, fallback to original
+        if len(summarized) != len(contexts):
+            return contexts
+            
+        return summarized
+        
+    except Exception as e:
+        print(f"Summarization failed: {e}")
+        return contexts  # Fallback to original
+
+
 @router.post("", response_model=QueryResponse, status_code=status.HTTP_200_OK)
 async def query_endpoint(req: QueryRequest):
     """
@@ -52,12 +125,16 @@ async def query_endpoint(req: QueryRequest):
     - **top_k**: Number of context snippets to retrieve (default: 5)
     - **use_query_expansion**: Expand query with medical terminology (default: False)
     - **score_threshold**: Minimum similarity score to include results (default: 0.0)
+    - **summarize_context**: Use AI to intelligently condense contexts (default: False)
     
     Returns:
     - **answer**: The generated answer
-    - **contexts**: List of relevant context snippets
+    - **contexts**: List of relevant context snippets (original)
     - **scores**: Similarity scores for each context
     - **expanded_query**: Expanded query if query expansion was used
+    - **summarized_contexts**: AI-condensed contexts if summarization was used
+    - **original_context_length**: Total characters in original contexts
+    - **summarized_context_length**: Total characters after summarization
     """
     
     if not req.query or req.query.strip() == "":
@@ -80,7 +157,6 @@ async def query_endpoint(req: QueryRequest):
         if req.use_query_expansion:
             expanded_query = expand_medical_query(req.query, LLM)
             search_query = expanded_query
-            print(f"🔍 Expanded query: {expanded_query}")
         
         # Retrieve relevant documents with scores
         retrieved_docs_with_scores = VECTOR_STORE.similarity_search_with_score(
@@ -109,6 +185,9 @@ async def query_endpoint(req: QueryRequest):
         retrieved_docs = [doc for doc, score in filtered_results]
         scores = [float(score) for doc, score in filtered_results]
         
+        # Extract metadata from documents
+        metadata_list = [doc.metadata for doc in retrieved_docs]
+        
         # Extract context snippets as plain strings, clean and deduplicate
         raw_contexts = [doc.page_content for doc in retrieved_docs]
         
@@ -116,6 +195,7 @@ async def query_endpoint(req: QueryRequest):
         cleaned_contexts = []
         seen = set()
         cleaned_scores = []
+        cleaned_metadata = []
         
         for idx, ctx in enumerate(raw_contexts):
             # Remove unicode soft hyphens and other special chars
@@ -127,9 +207,25 @@ async def query_endpoint(req: QueryRequest):
                 seen.add(cleaned)
                 cleaned_contexts.append(cleaned)
                 cleaned_scores.append(scores[idx])
+                cleaned_metadata.append(metadata_list[idx])
         
         contexts = cleaned_contexts
         final_scores = cleaned_scores
+        final_metadata = cleaned_metadata
+        
+        # AI Context Summarization (optional)
+        contexts_for_answer = contexts  # Default to original contexts
+        
+        if req.summarize_context:
+            summarized_contexts = summarize_contexts(req.query, contexts, LLM)
+            
+            # Use summarized contexts for answer generation AND response
+            contexts_for_answer = summarized_contexts
+            contexts = summarized_contexts  # Replace contexts with summarized version
+            
+            # Create documents with summarized content
+            from langchain_core.documents import Document
+            retrieved_docs = [Document(page_content=ctx, metadata={}) for ctx in summarized_contexts]
         
         # Generate answer using RAG
         state = {
@@ -150,7 +246,7 @@ async def query_endpoint(req: QueryRequest):
             answer=answer.strip(),
             contexts=contexts,
             scores=final_scores,
-            expanded_query=expanded_query
+            metadata=final_metadata
         )
     
     except HTTPException:

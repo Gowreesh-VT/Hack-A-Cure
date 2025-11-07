@@ -22,6 +22,9 @@ def add_cors(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Add CORS middleware FIRST before routes
+add_cors(app)
+
 # Include API routes with /api/v1 prefix
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
@@ -33,8 +36,6 @@ app.include_router(query_view.router, prefix="")
 async def health_check():
     return {"message": "live"}
 
-
-add_cors(app)
 
 handler = Mangum(app)
 

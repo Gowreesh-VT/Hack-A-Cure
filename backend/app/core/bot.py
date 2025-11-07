@@ -13,16 +13,6 @@ from qdrant_client import QdrantClient
 
 from app.core.config import settings
 
-# Setup Google Cloud credentials from environment variable if provided
-if os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON"):
-    import tempfile
-    # Write the JSON credentials to a temporary file
-    credentials_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-        f.write(credentials_json)
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = f.name
-    print(f"✅ Google Cloud credentials loaded from environment variable")
-
 # Try to import Google Vertex AI (optional)
 try:
     from langchain_google_vertexai import ChatVertexAI, VertexAIEmbeddings
@@ -34,12 +24,11 @@ except ImportError:
 
 # Try to import Google Gemini API (optional)
 try:
-    from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+    from langchain_google_genai import ChatGoogleGenerativeAI
     GEMINI_API_AVAILABLE = True
 except ImportError:
     GEMINI_API_AVAILABLE = False
     ChatGoogleGenerativeAI = None
-    GoogleGenerativeAIEmbeddings = None
 
 
 # Initialize LLM based on provider selection
@@ -77,13 +66,7 @@ else:
     )
 
 # Initialize Embeddings based on provider selection
-if settings.USE_GEMINI_API and settings.GOOGLE_API_KEY and GEMINI_API_AVAILABLE:
-    # Use Gemini API for embeddings (simpler, no service account needed)
-    EMBEDDINGS = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
-        google_api_key=settings.GOOGLE_API_KEY,
-    )
-elif settings.USE_GOOGLE_VERTEX and settings.GOOGLE_CLOUD_PROJECT:
+if settings.USE_GOOGLE_VERTEX and settings.GOOGLE_CLOUD_PROJECT:
     if not VERTEX_AVAILABLE:
         raise ImportError("langchain-google-vertexai is not installed. Run: pip install langchain-google-vertexai")
     EMBEDDINGS = VertexAIEmbeddings(

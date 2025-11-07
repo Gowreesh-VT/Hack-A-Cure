@@ -72,3 +72,8 @@ Thumbs.db
 processed_medical_data.json
 backend/.env
 .env
+
+# Google Cloud Service Account Keys
+backend/render-service-account.json
+backend/render-sa-minified.json
+*.json
