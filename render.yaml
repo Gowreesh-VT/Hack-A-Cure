@@ -1,7 +1,7 @@
 services:
   - type: web
     name: hackacure-api
-    env: python
+    runtime: python
     region: oregon
     plan: free
     rootDir: backend
