@@ -152,5 +152,5 @@ backend/render-sa-minified.json
 
 *.json
 
-config.bat
 node_modules
+config.bat
